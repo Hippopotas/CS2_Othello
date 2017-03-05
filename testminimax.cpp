@@ -25,9 +25,13 @@ int main(int argc, char *argv[]) {
     // Initialize player as the white player, and set testing_minimax flag.
     Player *player = new Player(WHITE);
     player->testingMinimax = true;
-	
+
+    delete player->board;
     player->board = board;
-    player->adjacent = new std::vector<Move>();
+
+    while (player->adjacent->size() > 0) {
+        player->adjacent->pop_back();
+    }
     player->adjacent->push_back(Move(0, 4));
     player->adjacent->push_back(Move(1, 4));
     player->adjacent->push_back(Move(2, 4));
@@ -46,7 +50,9 @@ int main(int argc, char *argv[]) {
     player->adjacent->push_back(Move(0, 1));
     player->adjacent->push_back(Move(0, 2));
     
-    player->occupied = new std::vector<Move>();
+    while (player->occupied->size() > 0) {
+        player->occupied->pop_back();
+    }
     player->occupied->push_back(Move(0, 3));
     player->occupied->push_back(Move(1, 3));
     player->occupied->push_back(Move(1, 2));
@@ -56,7 +62,7 @@ int main(int argc, char *argv[]) {
     player->occupied->push_back(Move(5, 3));
 
     // Get player's move and check if it's right.
-    Move *move = player->doMove(nullptr, 0);
+    Move *move = player->doMove(nullptr, -1);
 
     if (move != nullptr && move->x == 1 && move->y == 1) {
         std::cout << "Correct move: (1, 1)" << std::endl;;
@@ -69,6 +75,9 @@ int main(int argc, char *argv[]) {
         }
         std::cout << ", expected (1, 1)" << std::endl;
     }
+
+    delete move;
+    delete player;
 
     return 0;
 }

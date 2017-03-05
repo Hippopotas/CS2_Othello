@@ -2,6 +2,8 @@
 #include <tuple>
 #include <math.h>
 #include <cstring>
+#include <fstream>
+#include <iostream>
 
 /*
  * Constructor for the player; initialize everything here. The side your AI is
@@ -274,11 +276,15 @@ Move *Player::calculate_move(int msLeft) {
         layers = 2;
     }
 
-    layers = 3;
+    // layers = 6;
     
-    //int begin = clock();
+    // int begin = clock();
     Move * mmax = std::get<0>(minimax(board, adjacent, occupied, side, layers));
-    //std::cerr << layers << " " << adjacent->size() << " " << clock() - begin << std::endl;
+    // int time = clock() - begin;
+    // std::ofstream output;
+    // output.open("data/6.csv", std::ios_base::app);
+    // output << adjacent->size() << "," << time << std::endl;
+    // output.close();
 
     return mmax;
 }

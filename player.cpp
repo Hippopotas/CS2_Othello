@@ -1,4 +1,6 @@
 #include "player.hpp"
+#include <tuple>
+#include <math.h>
 
 /*
  * Constructor for the player; initialize everything here. The side your AI is
@@ -113,7 +115,7 @@ int index_of(std::vector<Move> * moves, int x, int y) {
 /*
  * 
  */
-int Player::calc_Heuristic(Move * m)
+int Player::calc_Heuristic(Board * board, Move * m, Side side)
 {
 	Board * temp_board = board->copy();
 	temp_board->doMove(m, side);
@@ -131,7 +133,106 @@ int Player::calc_Heuristic(Move * m)
 	return score;
 }
 
+std::vector<Move> * copyvec(std::vector<Move> * vec) {
+	std::vector<Move> * ret = new std::vector<Move>();
+	for (unsigned int i = 0; i < vec->size(); i++) {
+		ret->push_back((*vec)[i]);
+	}
+	return ret;
+}
 
+/*
+ * Minimax function
+ */
+std::tuple<Move*, int> Player::minimax(Board * board, std::vector<Move> * adjacent, 
+						std::vector<Move> * occupied, Side toMove, int layers)
+{
+	if (layers == 1)
+	{
+	    int value = -100;
+		Move * mmax = nullptr;
+		
+		for (unsigned int i = 0; i < adjacent->size(); i++) {
+			if (board->checkMove(&(*adjacent)[i], toMove)) {
+				int x = (*adjacent)[i].getX();
+				int y = (*adjacent)[i].getY();
+				
+				Move * move = new Move(x, y);
+				
+				int delta = calc_Heuristic(board, move, toMove);
+				if (delta > value)
+				{
+					value = delta;
+					delete mmax;
+					mmax = move;
+				}
+				else
+				{
+					delete move;
+				}
+			}
+		}
+		
+		if (value == -100) {
+			value = 0;
+		}
+		return std::make_tuple(mmax, value);
+	}
+	else
+	{
+		Move * mmax = nullptr;
+		int value = -100;
+		
+		for (unsigned int i = 0; i < adjacent->size(); i++) {
+			if (board->checkMove(&(*adjacent)[i], side)) {
+				int x = (*adjacent)[i].getX();
+				int y = (*adjacent)[i].getY();
+				
+				Board * new_board = board->copy();
+				std::vector<Move> * new_adj = copyvec(adjacent);
+				std::vector<Move> * new_occ = copyvec(occupied);
+				
+				Move * moveToMake = new Move(x, y);
+				makeMoveOnBoard(new_board, new_adj, new_occ, moveToMake, toMove);
+				
+				int before = board->count(toMove);
+				int after = new_board->count(toMove);
+				
+				Side other = WHITE;
+				if (toMove == WHITE) {
+					other = BLACK;
+				}
+				
+				std::tuple<Move*, int> data = minimax(new_board, new_adj,
+												new_occ, other, layers - 1);
+				
+				Move * move = std::get<0>(data);
+				
+				int delta = after - before - std::get<1>(data);
+				
+				if (delta > value)
+				{
+					value = delta;
+					delete mmax;
+					mmax = moveToMake;
+				}
+				else
+				{
+					delete moveToMake;
+				}
+				delete move;
+				delete new_board;
+				delete new_adj;
+				delete new_occ;
+			}
+		}
+
+		if (value == -100) {
+			value = 0;
+		}
+		return std::make_tuple(mmax, value);
+	}
+}
 
 
 
@@ -150,7 +251,7 @@ int Player::calc_Heuristic(Move * m)
  */
 Move *Player::doMove(Move *opponentsMove, int msLeft) {
     if (opponentsMove != nullptr) {
-        makeMoveOnBoard(opponentsMove, opponentSide);
+        makeMoveOnBoard(board, adjacent, occupied, opponentsMove, opponentSide);
     }
 
     int t_move = msLeft * 2 / empty_spaces;
@@ -160,7 +261,7 @@ Move *Player::doMove(Move *opponentsMove, int msLeft) {
 
     Move * m = calculate_move(t_move);
     
-    makeMoveOnBoard(m, side);
+    makeMoveOnBoard(board, adjacent, occupied, m, side);
     
     return m;
 }
@@ -168,44 +269,21 @@ Move *Player::doMove(Move *opponentsMove, int msLeft) {
 Move *Player::calculate_move(int msLeft) {
 
     if (msLeft == -1) {
-        msLeft = 60000;
+        msLeft = 1000;
     }
     
-    int value = -10;
-    Move * mmax;
-    
-    for (unsigned int i = 0; i < adjacent->size(); i++) {
-        if (board->checkMove(&(*adjacent)[i], side)) {
-            int x = (*adjacent)[i].getX();
-            int y = (*adjacent)[i].getY();
-            
-            Move * move = new Move(x, y);
-            
-            int delta = calc_Heuristic(move);
-            
-            if (delta > value)
-            {
-				value = delta;
-				mmax = move;
-			}
-			else
-			{
-				delete move;
-			}
-        }
-    }
-    
-    if (value == -1)
-    {
-		return nullptr;
+    int layers = int(log10(msLeft));
+    if (testingMinimax) {
+		layers = 2;
 	}
-	else
-	{
-		return mmax;
-	}
+
+    Move * mmax = std::get<0>(minimax(board, adjacent, occupied, side, layers));
+    
+	return mmax;
 }
 
-void Player::makeMoveOnBoard(Move * m, Side side) {
+void Player::makeMoveOnBoard(Board * board, std::vector<Move> * adjacent, 
+							std::vector<Move> * occupied, Move * m, Side side) {
     board->doMove(m, side);
 
     int x = m->x;

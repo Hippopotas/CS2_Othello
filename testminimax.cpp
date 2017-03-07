@@ -25,12 +25,35 @@ int main(int argc, char *argv[]) {
     // Initialize player as the white player, and set testing_minimax flag.
     Player *player = new Player(WHITE);
     player->testingMinimax = true;
-
-
-    /**
-     * TODO: Write code to set your player's internal board state to the
-     * example state.
-     */
+	
+    player->board = board;
+    player->adjacent = new std::vector<Move>();
+    player->adjacent->push_back(Move(0, 4));
+    player->adjacent->push_back(Move(1, 4));
+    player->adjacent->push_back(Move(2, 4));
+    player->adjacent->push_back(Move(3, 4));
+    player->adjacent->push_back(Move(4, 4));
+    player->adjacent->push_back(Move(5, 4));
+    player->adjacent->push_back(Move(6, 4));
+    player->adjacent->push_back(Move(6, 3));
+    player->adjacent->push_back(Move(6, 2));
+    player->adjacent->push_back(Move(5, 2));
+    player->adjacent->push_back(Move(4, 2));
+    player->adjacent->push_back(Move(3, 2));
+    player->adjacent->push_back(Move(2, 2));
+    player->adjacent->push_back(Move(2, 1));
+    player->adjacent->push_back(Move(1, 1));
+    player->adjacent->push_back(Move(0, 1));
+    player->adjacent->push_back(Move(0, 2));
+    
+    player->occupied = new std::vector<Move>();
+    player->occupied->push_back(Move(0, 3));
+    player->occupied->push_back(Move(1, 3));
+    player->occupied->push_back(Move(1, 2));
+    player->occupied->push_back(Move(2, 3));
+    player->occupied->push_back(Move(3, 3));
+    player->occupied->push_back(Move(4, 3));
+    player->occupied->push_back(Move(5, 3));
 
     // Get player's move and check if it's right.
     Move *move = player->doMove(nullptr, 0);

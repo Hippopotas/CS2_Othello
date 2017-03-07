@@ -19,7 +19,9 @@ public:
 
 	int value(int x, int y);
 	
-	int calc_Heuristic(Move * m);
+	int calc_Heuristic(Board * board, Move * m, Side side);
+	std::tuple<Move*, int> minimax(Board * board, std::vector<Move> * adjacent, 
+						std::vector<Move> * occupied, Side toMove, int layers);
 
     Side side;
     Side opponentSide;
@@ -29,7 +31,8 @@ public:
 
     Move *doMove(Move *opponentsMove, int msLeft);
     Move *calculate_move(int ms_for_move);
-    void makeMoveOnBoard(Move * move, Side side);
+    void makeMoveOnBoard(Board * board, std::vector<Move> * adj,
+						std::vector<Move> * occ, Move * move, Side side);
 
     // Flag to tell if the player is running within the test_minimax context
     bool testingMinimax;

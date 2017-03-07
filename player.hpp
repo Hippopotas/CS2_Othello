@@ -17,6 +17,10 @@ public:
     std::vector<Move> * adjacent;
     std::vector<Move> * occupied;
 
+	int value(int x, int y);
+	
+	int calc_Heuristic(Move * m);
+
     Side side;
     Side opponentSide;
 

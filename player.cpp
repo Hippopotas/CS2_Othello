@@ -12,7 +12,6 @@ Player::Player(Side side) {
     board = new Board();
     empty_spaces = 60;
 
-
     this->side = side;
     if (side == WHITE) {
         opponentSide = BLACK;
@@ -42,6 +41,58 @@ Player::Player(Side side) {
 }
 
 /*
+ * Returns assigned value of a board space (for simple heuristic function).
+ */
+int Player::value(int x, int y)
+{
+	int xr = x;
+	int yr = y;
+	
+	if (x >= 4)
+	{
+		xr = 8 - x;
+	}
+	if (y >= 4)
+	{
+		yr = 8 - y;
+	}
+	
+	/*if (yr > xr)
+	{
+		std::swap(xr, yr);
+	}
+	
+	std::vector<int> * values = new std::vector<int>();
+	values->push_back(8);
+	values->push_back(1);
+	values->push_back(0);
+	values->push_back(7);
+	values->push_back(2);
+	values->push_back(6);
+	values->push_back(5);
+	values->push_back(3);
+	values->push_back(4);
+	values->push_back(2);
+	
+	int index = (x * (x + 1)) / 2 + y;
+	
+	return (*values)[index];*/
+	
+	if (yr > 1 or xr > 1)
+	{
+		return 0;
+	}
+	else if (yr == 0 and xr == 0)
+	{
+		return 3;
+	}
+	else
+	{
+		return -3;
+	}
+}
+
+/*
  * Destructor for the player.
  */
 Player::~Player() {
@@ -59,7 +110,26 @@ int index_of(std::vector<Move> * moves, int x, int y) {
     return -1;
 }
 
-
+/*
+ * 
+ */
+int Player::calc_Heuristic(Move * m)
+{
+	Board * temp_board = board->copy();
+	temp_board->doMove(m, side);
+	
+	//a for after; b for before!
+	int a = temp_board->count(side);
+	int b = board->count(side);
+	
+	int score = a - b;
+	
+	score += value( m->getX(), m->getY());
+	
+	delete temp_board;
+	
+	return score;
+}
 
 
 
@@ -100,15 +170,39 @@ Move *Player::calculate_move(int msLeft) {
     if (msLeft == -1) {
         msLeft = 60000;
     }
+    
+    int value = -10;
+    Move * mmax;
+    
     for (unsigned int i = 0; i < adjacent->size(); i++) {
         if (board->checkMove(&(*adjacent)[i], side)) {
             int x = (*adjacent)[i].getX();
             int y = (*adjacent)[i].getY();
-            Move * m = new Move(x, y);
-            return m;
+            
+            Move * move = new Move(x, y);
+            
+            int delta = calc_Heuristic(move);
+            
+            if (delta > value)
+            {
+				value = delta;
+				mmax = move;
+			}
+			else
+			{
+				delete move;
+			}
         }
     }
-    return nullptr;
+    
+    if (value == -1)
+    {
+		return nullptr;
+	}
+	else
+	{
+		return mmax;
+	}
 }
 
 void Player::makeMoveOnBoard(Move * m, Side side) {

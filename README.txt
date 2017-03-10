@@ -1,6 +1,6 @@
 Team Best Group Team's CS2 project.
 
-Richard: implemented original AI and added mobility to AI
+Richard: implemented original AI and added mobility to AI, debugged
 
 Charles: created base for making moves with Player class, optimized the specific numbers used for the AI, debugged
 

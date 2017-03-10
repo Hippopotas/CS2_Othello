@@ -1,9 +1,12 @@
 #include "player.hpp"
-#include <tuple>
 #include <math.h>
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#include <string>
+#include <sys/types.h>
+#include <dirent.h>
+#include <climits>
 
 /*
  * Constructor for the player; initialize everything here. The side your AI is
@@ -46,12 +49,12 @@ Player::Player(Side side) {
 
     values = new std::vector<int>();
     values->push_back(10);
-    values->push_back(-1);
-    values->push_back(-3);
-    values->push_back(1);
+    values->push_back(-5);
+    values->push_back(-5);
     values->push_back(0);
-    values->push_back(1);
-    values->push_back(1);
+    values->push_back(0);
+    values->push_back(0);
+    values->push_back(0);
     values->push_back(0);
     values->push_back(0);
     values->push_back(0);
@@ -61,27 +64,24 @@ Player::Player(Side side) {
  * Returns assigned value of a board space (for simple heuristic function).
  */
 int Player::value(int x, int y)
-{
-    int xr = x;
-    int yr = y;
-    
+{ 
     if (x >= 4)
     {
-        xr = 7 - x;
+        x = 7 - x;
     }
     if (y >= 4)
     {
-        yr = 7 - y;
+        y = 7 - y;
     }
     
-    if (yr > xr)
+    if (y > x)
     {
-        int temp = xr;
-        xr = yr;
-        yr = temp;
+        int temp = x;
+        x = y;
+        y = temp;
     }
     
-    int index = (xr * (xr + 1)) / 2 + yr;
+    int index = (x * (x + 1)) / 2 + y;
 
     return (*values)[index];
 }
@@ -108,7 +108,8 @@ int index_of(std::vector<Move> * moves, int x, int y) {
 /*
  * 
  */
-int Player::calc_Heuristic(Board * board, Move * m, Side side)
+int Player::calc_Heuristic(Board * board, Move * m, std::vector<Move> * adjacent,
+                            std::vector<Move> * occupied, Side side)
 {
     Board * temp_board = board->copy();
     temp_board->doMove(m, side);
@@ -117,14 +118,18 @@ int Player::calc_Heuristic(Board * board, Move * m, Side side)
     int a = temp_board->count(side);
     int b = board->count(side);
     
-    int score = a - b;
-
-    score += value( m->getX(), m->getY());
+    int score = 0;
+    score += a - b;
+    if (!testingMinimax) {
+        score += value(m->getX(), m->getY());
+    }
     
     delete temp_board;
     
     return score;
 }
+
+
 
 std::vector<Move> * copyvec(std::vector<Move> * vec) {
     std::vector<Move> * ret = new std::vector<Move>();
@@ -140,92 +145,162 @@ std::vector<Move> * copyvec(std::vector<Move> * vec) {
 std::tuple<Move*, int> Player::minimax(Board * board, std::vector<Move> * adjacent, 
                         std::vector<Move> * occupied, Side toMove, int layers)
 {
-    if (layers <= 1)
-    {
-        int value = -100;
-        Move * mmax = nullptr;
-
-        for (unsigned int i = 0; i < adjacent->size(); i++) {
-            if (board->checkMove(&(*adjacent)[i], toMove)) {
-                int x = (*adjacent)[i].getX();
-                int y = (*adjacent)[i].getY();
-                
-                Move * move = new Move(x, y);
-                int delta = calc_Heuristic(board, move, toMove);
-                
-                if (delta > value)
-                {
-                    value = delta;
-                    delete mmax;
-                    mmax = move;
+    bool storeValues = true;
+    if (testingMinimax) {
+        storeValues = false;
+    }
+    
+    Side other = WHITE;
+    if (toMove == WHITE) {
+        other = BLACK;
+    }
+    
+    std::string dir("data/");
+    for (int y = 0; y < 8; y++) {
+        for (int x = 0; x < 8; x++) {
+            if (board->get(toMove, x, y)) {
+                dir.append("m");
+            } else if (board->get(other, x, y)) {
+                dir.append("o");
+            } else {
+                dir.append("-");
+            }
+            if (x == 3) {
+                dir.append("/");
+                if (storeValues) {
+                    ifstream f(dir);
+                    if (f.good()) {
+                        f.close();
+                    } else {
+                        system(("mkdir " + dir).c_str());
+                    }
                 }
-                else
-                {
-                    delete move;
-                }
-
             }
         }
-        
-        if (value == -100) {
-            value = 0;
+        dir.append("/");
+        if (storeValues) {
+            ifstream f(dir);
+            if (f.good()) {
+                f.close();
+            } else {
+                system(("mkdir " + dir).c_str());
+            }
         }
-        return std::make_tuple(mmax, value);
     }
-    else
-    {
-        Move * mmax = nullptr;
-        int value = -100;
-        
-        for (unsigned int i = 0; i < adjacent->size(); i++) {
-            if (board->checkMove(&(*adjacent)[i], side)) {
-                int x = (*adjacent)[i].getX();
-                int y = (*adjacent)[i].getY();
-                
+    dir.append(std::to_string(layers));
+    dir.append(".csv");
+
+    std::ifstream in(dir);
+
+    if (in) {
+        std::vector<std::string> d;
+        std::string dvs;
+        bool error_occur = false;
+        while (std::getline(in, dvs, ',')) {
+            d.push_back(dvs);
+            if (in.eof() && d.size() < 3) {
+                error_occur = true;
+                break;
+            }
+        }
+
+        if (!error_occur) {
+            int value = std::stoi(d.at(0));
+            int x = std::stoi(d.at(1));
+            int y = std::stoi(d.at(2));
+            Move * m = nullptr;
+            if (x != -1 && y != -1) {
+                m = new Move(x, y);
+            }
+            in.close();
+            if (board->checkMove(m, toMove)) {
+                return std::make_tuple(m, value);
+            } else {
+                std::cerr << "invalid move stored:\n";
+                std::cerr << dir << std::endl;
+                if (m) {
+                    delete m;
+                }
+                exit(0);
+            }
+        } else {
+            std::cerr << "invalid file format at: ";
+            std::cerr << dir << std::endl;
+            in.close();
+        }
+    }
+
+    int value = INT_MIN;
+    Move * mmax = nullptr;
+
+    for (unsigned int i = 0; i < adjacent->size(); i++) {
+        if (board->checkMove(&(*adjacent)[i], toMove)) {
+            int x = (*adjacent)[i].getX();
+            int y = (*adjacent)[i].getY();
+            
+            Move * moveToMake = new Move(x, y);
+            int delta = calc_Heuristic(board, moveToMake, adjacent, occupied, toMove);
+
+            if (layers > 1) {
                 Board * new_board = board->copy();
                 std::vector<Move> * new_adj = copyvec(adjacent);
                 std::vector<Move> * new_occ = copyvec(occupied);
-                
-                Move * moveToMake = new Move(x, y);
+
                 makeMoveOnBoard(new_board, new_adj, new_occ, moveToMake, toMove, false);
-                
-                int before = board->count(toMove);
-                int after = new_board->count(toMove);
-                
-                Side other = WHITE;
-                if (toMove == WHITE) {
-                    other = BLACK;
-                }
                 
                 std::tuple<Move*, int> data = minimax(new_board, new_adj,
                                                 new_occ, other, layers - 1);
                 
                 Move * move = std::get<0>(data);
                 
-                int delta = after - before - std::get<1>(data);
-                
-                if (delta > value)
-                {
-                    value = delta;
-                    delete mmax;
-                    mmax = moveToMake;
-                }
-                else
-                {
-                    delete moveToMake;
-                }
-                delete move;
+                delta -= std::get<1>(data);
                 delete new_board;
                 delete new_adj;
                 delete new_occ;
+                delete move;
             }
+            
+            if (delta > value)
+            {
+                value = delta;
+                delete mmax;
+                mmax = moveToMake;
+            }
+            else
+            {
+                delete moveToMake;
+            }
+
+        }
+    }
+    
+    if (value == INT_MIN) {
+        value = 0;
+    }
+
+    if (storeValues) {
+        int x = -1;
+        int y = -1;
+        if (mmax) {
+            x = mmax->getX();
+            y = mmax->getY();
         }
 
-        if (value == -100) {
-            value = 0;
+        std::ifstream f(dir.c_str());
+        if (f.good()) {
+            f.close();
+            system(("rm " + dir).c_str());
+            std::cerr << "replaced: " + dir << std::endl;
         }
-        return std::make_tuple(mmax, value);
+        std::ofstream out(dir);
+        if (!out) {
+            std::cerr << "File at \"" << dir << "\" could not be created.\n";
+        }
+        out << value << "," << x << "," << y << std::endl;
+        out.close();
     }
+
+    return std::make_tuple(mmax, value);
 }
 
 
@@ -266,25 +341,21 @@ Move *Player::doMove(Move *opponentsMove, int msLeft) {
 
 Move *Player::calculate_move(int msLeft) {
     if (msLeft == -1) {
-        msLeft = 1001;
+        msLeft = 100000;
     }
 
-    int layers = int(log10(msLeft) + 3);
-
+    int layers = int(log10(msLeft));
+    if (layers > empty_spaces) {
+        layers = empty_spaces;
+    }
 
     if (testingMinimax) {
         layers = 2;
     }
 
-    // layers = 6;
-    
-    // int begin = clock();
+    std::cerr << layers << std::endl;
+
     Move * mmax = std::get<0>(minimax(board, adjacent, occupied, side, layers));
-    // int time = clock() - begin;
-    // std::ofstream output;
-    // output.open("data/6.csv", std::ios_base::app);
-    // output << adjacent->size() << "," << time << std::endl;
-    // output.close();
 
     return mmax;
 }

@@ -5,6 +5,7 @@
 #include "common.hpp"
 #include "board.hpp"
 #include <vector>
+#include <tuple>
 
 using namespace std;
 
@@ -20,7 +21,8 @@ public:
 
     int value(int x, int y);
     
-    int calc_Heuristic(Board * board, Move * m, Side side);
+    int calc_Heuristic(Board * board, Move * m, std::vector<Move> *adjacent,
+                        std::vector<Move> *occupied, Side side);
     std::tuple<Move*, int> minimax(Board * board, std::vector<Move> * adjacent, 
                         std::vector<Move> * occupied, Side toMove, int layers);
 

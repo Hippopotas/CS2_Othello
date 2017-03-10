@@ -18,6 +18,7 @@ public:
     std::vector<Move> * adjacent;
     std::vector<Move> * occupied;
     std::vector<int> * values;
+    bool storeValues;
 
     int value(int x, int y);
     

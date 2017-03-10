@@ -20,6 +20,14 @@ Player::Player(Side side) {
     board = new Board();
     empty_spaces = 60;
 
+    ifstream f("data/");
+    if (f.good()) {
+        f.close();
+    } else {
+        system("mkdir data/");
+    }
+    storeValues = true;
+
     this->side = side;
     if (side == WHITE) {
         opponentSide = BLACK;
@@ -51,10 +59,10 @@ Player::Player(Side side) {
     values->push_back(10);
     values->push_back(-5);
     values->push_back(-5);
+    values->push_back(1);
     values->push_back(0);
     values->push_back(0);
-    values->push_back(0);
-    values->push_back(0);
+    values->push_back(1);
     values->push_back(0);
     values->push_back(0);
     values->push_back(0);
@@ -145,7 +153,6 @@ std::vector<Move> * copyvec(std::vector<Move> * vec) {
 std::tuple<Move*, int> Player::minimax(Board * board, std::vector<Move> * adjacent, 
                         std::vector<Move> * occupied, Side toMove, int layers)
 {
-    bool storeValues = true;
     if (testingMinimax) {
         storeValues = false;
     }
@@ -294,7 +301,8 @@ std::tuple<Move*, int> Player::minimax(Board * board, std::vector<Move> * adjace
         }
         std::ofstream out(dir);
         if (!out) {
-            std::cerr << "File at \"" << dir << "\" could not be created.\n";
+            std::cerr << "File at \"" << dir << "\" could not be created. Storing disabled.\n";
+            storeValues = false;
         }
         out << value << "," << x << "," << y << std::endl;
         out.close();
@@ -344,7 +352,7 @@ Move *Player::calculate_move(int msLeft) {
         msLeft = 100000;
     }
 
-    int layers = int(log10(msLeft));
+    int layers = int(log10(msLeft)) + 1;
     if (layers > empty_spaces) {
         layers = empty_spaces;
     }
@@ -353,9 +361,17 @@ Move *Player::calculate_move(int msLeft) {
         layers = 2;
     }
 
-    std::cerr << layers << std::endl;
+    std::cerr << "Searching " << layers << " layers..." << std::endl;
 
     Move * mmax = std::get<0>(minimax(board, adjacent, occupied, side, layers));
+
+    int x = -1;
+    int y = -1;
+    if (mmax) {
+        x = mmax->getX();
+        y = mmax->getY();
+    }
+    std::cerr << "Found move: (" << x << "," << y << ")\n";
 
     return mmax;
 }

@@ -26,7 +26,7 @@ Player::Player(Side side) {
     } else {
         system("mkdir data/");
     }
-    storeValues = true;
+    storeValues = false;
 
     this->side = side;
     if (side == WHITE) {
@@ -113,32 +113,6 @@ int index_of(std::vector<Move> * moves, int x, int y) {
     return -1;
 }
 
-/*
- * 
- */
-int Player::calc_Heuristic(Board * board, Move * m, std::vector<Move> * adjacent,
-                            std::vector<Move> * occupied, Side side)
-{
-    Board * temp_board = board->copy();
-    temp_board->doMove(m, side);
-    
-    //a for after; b for before!
-    int a = temp_board->count(side);
-    int b = board->count(side);
-    
-    int score = 0;
-    score += a - b;
-    if (!testingMinimax) {
-        score += value(m->getX(), m->getY());
-    }
-    
-    delete temp_board;
-    
-    return score;
-}
-
-
-
 std::vector<Move> * copyvec(std::vector<Move> * vec) {
     std::vector<Move> * ret = new std::vector<Move>();
     for (unsigned int i = 0; i < vec->size(); i++) {
@@ -146,6 +120,59 @@ std::vector<Move> * copyvec(std::vector<Move> * vec) {
     }
     return ret;
 }
+
+/*
+ * 
+ */
+int Player::calc_Heuristic(Board * board, Move * m, std::vector<Move> * adjacent,
+                            std::vector<Move> * occupied, Side side)
+{
+    Board * temp_board = board->copy();
+    std::vector<Move> * new_adj = copyvec(adjacent);
+    std::vector<Move> * new_occ = copyvec(occupied);
+    
+    makeMoveOnBoard(temp_board, new_adj, new_occ, m, side, false);
+    
+    int score = 0;
+    
+    if (new_occ->size() < 24) {
+        //Mobility score calc
+        for (unsigned int i = 0; i < new_adj->size(); i++) {
+            if (temp_board->checkMove(&(*new_adj)[i], side))
+            {
+                score += 1;
+            }
+        }
+        
+        for (unsigned int i = 0; i < adjacent->size(); i++) {
+            if (board->checkMove(&(*adjacent)[i], side))
+            {
+                score -= 1;
+            }
+        }
+    }
+    else {
+        //Generic score calc
+        
+        //a for after; b for before!
+        int a = temp_board->count(side);
+        int b = board->count(side);
+        score += a - b;
+
+        
+    }
+    delete temp_board;
+    delete new_adj;
+    delete new_occ;
+
+    if (!testingMinimax) {
+        score += value(m->getX(), m->getY());
+    }
+    
+    return score;
+}
+
+
 
 /*
  * Minimax function

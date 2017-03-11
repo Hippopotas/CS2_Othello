@@ -20,14 +20,6 @@ Player::Player(Side side) {
     board = new Board();
     empty_spaces = 60;
 
-    ifstream f("data/");
-    if (f.good()) {
-        f.close();
-    } else {
-        system("mkdir data/");
-    }
-    storeValues = false;
-
     this->side = side;
     if (side == WHITE) {
         opponentSide = BLACK;
@@ -133,14 +125,22 @@ int Player::calc_Heuristic(Board * board, Move * m, std::vector<Move> * adjacent
     
     makeMoveOnBoard(temp_board, new_adj, new_occ, m, side, false);
     
+    Side other = WHITE;
+    if (side == WHITE) {
+        other = BLACK;
+    }
+
     int score = 0;
     
-    if (new_occ->size() < 24) {
+    if (new_occ->size() < 52) {
         //Mobility score calc
         for (unsigned int i = 0; i < new_adj->size(); i++) {
             if (temp_board->checkMove(&(*new_adj)[i], side))
             {
                 score += 1;
+            }
+            if (temp_board->checkMove(&(*new_adj)[i], other)) {
+                score -= 1;
             }
         }
         
@@ -148,6 +148,9 @@ int Player::calc_Heuristic(Board * board, Move * m, std::vector<Move> * adjacent
             if (board->checkMove(&(*adjacent)[i], side))
             {
                 score -= 1;
+            }
+            if (board->checkMove(&(*adjacent)[i], other)) {
+                score += 1;
             }
         }
     }
@@ -187,81 +190,6 @@ std::tuple<Move*, int> Player::minimax(Board * board, std::vector<Move> * adjace
     Side other = WHITE;
     if (toMove == WHITE) {
         other = BLACK;
-    }
-    
-    std::string dir("data/");
-    for (int y = 0; y < 8; y++) {
-        for (int x = 0; x < 8; x++) {
-            if (board->get(toMove, x, y)) {
-                dir.append("m");
-            } else if (board->get(other, x, y)) {
-                dir.append("o");
-            } else {
-                dir.append("-");
-            }
-            if (x == 3) {
-                dir.append("/");
-                if (storeValues) {
-                    ifstream f(dir);
-                    if (f.good()) {
-                        f.close();
-                    } else {
-                        system(("mkdir " + dir).c_str());
-                    }
-                }
-            }
-        }
-        dir.append("/");
-        if (storeValues) {
-            ifstream f(dir);
-            if (f.good()) {
-                f.close();
-            } else {
-                system(("mkdir " + dir).c_str());
-            }
-        }
-    }
-    dir.append(std::to_string(layers));
-    dir.append(".csv");
-
-    std::ifstream in(dir);
-
-    if (in) {
-        std::vector<std::string> d;
-        std::string dvs;
-        bool error_occur = false;
-        while (std::getline(in, dvs, ',')) {
-            d.push_back(dvs);
-            if (in.eof() && d.size() < 3) {
-                error_occur = true;
-                break;
-            }
-        }
-
-        if (!error_occur) {
-            int value = std::stoi(d.at(0));
-            int x = std::stoi(d.at(1));
-            int y = std::stoi(d.at(2));
-            Move * m = nullptr;
-            if (x != -1 && y != -1) {
-                m = new Move(x, y);
-            }
-            in.close();
-            if (board->checkMove(m, toMove)) {
-                return std::make_tuple(m, value);
-            } else {
-                std::cerr << "invalid move stored:\n";
-                std::cerr << dir << std::endl;
-                if (m) {
-                    delete m;
-                }
-                exit(0);
-            }
-        } else {
-            std::cerr << "invalid file format at: ";
-            std::cerr << dir << std::endl;
-            in.close();
-        }
     }
 
     int value = INT_MIN;
@@ -310,29 +238,6 @@ std::tuple<Move*, int> Player::minimax(Board * board, std::vector<Move> * adjace
     
     if (value == INT_MIN) {
         value = 0;
-    }
-
-    if (storeValues) {
-        int x = -1;
-        int y = -1;
-        if (mmax) {
-            x = mmax->getX();
-            y = mmax->getY();
-        }
-
-        std::ifstream f(dir.c_str());
-        if (f.good()) {
-            f.close();
-            system(("rm " + dir).c_str());
-            std::cerr << "replaced: " + dir << std::endl;
-        }
-        std::ofstream out(dir);
-        if (!out) {
-            std::cerr << "File at \"" << dir << "\" could not be created. Storing disabled.\n";
-            storeValues = false;
-        }
-        out << value << "," << x << "," << y << std::endl;
-        out.close();
     }
 
     return std::make_tuple(mmax, value);
